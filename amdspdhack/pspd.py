@@ -9,8 +9,8 @@ import multiprocessing
 import os
 from typing import Any, Iterable
 
-import spdhack.chksum as chksum
-import spdhack.strct as strct
+from amdspdhack import chksum
+from amdspdhack import strct
 
 
 DDR4_SPD_LEN = 512

@@ -2,5 +2,5 @@
 
 set -xeu
 
-pylint spdhack
-mypy --package spdhack
+pylint amdspdhack
+mypy --package amdspdhack

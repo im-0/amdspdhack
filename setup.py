@@ -3,21 +3,21 @@ import setuptools
 
 
 setuptools.setup(
-    name='spdhack',
+    name='amdspdhack',
     version='0.0.0',
-    url='https://github.com/im-0/TODO',
+    url='https://github.com/im-0/amdspdhack',
     author='Ivan Mironov',
     author_email='mironov.ivan@gmail.com',
     license='AGPL-3.0-or-later',
     description='Tool for modifying DDR4 SPD inside AMD BIOS images',
-    packages=('spdhack', ),
+    packages=('amdspdhack', ),
     python_requires='~=3.9',
     install_requires=(
         'click',
     ),
     entry_points={
         'console_scripts': [
-            'spdhack=spdhack.main:cli_main',
+            'amdspdhack=amdspdhack.main:cli_main',
         ],
     },
 )

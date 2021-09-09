@@ -11,8 +11,8 @@ import pprint
 
 import click
 
-import spdhack.pamd as pamd
-import spdhack.pspd as pspd
+from amdspdhack import pamd
+from amdspdhack import pspd
 
 
 def _get_prefix(dump_file_name: str) -> str:

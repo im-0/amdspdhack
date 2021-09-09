@@ -2,15 +2,16 @@
 """
 Parser AMD BIOS images.
 """
+
 import copy
 import itertools
 from collections import OrderedDict
 import os
 from typing import Any, Iterable
 
-import spdhack.chksum as chksum
-import spdhack.pspd as pspd
-import spdhack.strct as strct
+from amdspdhack import chksum
+from amdspdhack import pspd
+from amdspdhack import strct
 
 
 # https://github.com/coreboot/coreboot/blob/275ade9539cd315cf72c4126ebcce714dc3102ee/util/amdfwtool/amdfwtool.h#L204
