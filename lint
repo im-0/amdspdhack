@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -xeu
+
+pylint spdhack
+mypy --package spdhack
