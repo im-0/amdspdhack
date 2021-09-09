@@ -429,15 +429,14 @@ def find_spds(
     if size > 2 ** 16:
         n_procs = multiprocessing.cpu_count()
         print(f'[ ] Spawning {n_procs} parallel processes...')
-        pool = multiprocessing.Pool(n_procs)
-
-        for spds in pool.imap_unordered(
-                spd_finder,
-                _split_range(pn_range_start, pn_range_end, n_procs),
-                1):
-            for spd_offset, spd in spds:
-                n_spds += 1
-                yield spd_offset, spd
+        with multiprocessing.Pool(n_procs) as pool:
+            for spds in pool.imap_unordered(
+                    spd_finder,
+                    _split_range(pn_range_start, pn_range_end, n_procs),
+                    1):
+                for spd_offset, spd in spds:
+                    n_spds += 1
+                    yield spd_offset, spd
     else:
         for spd_offset, spd in spd_finder.find(range(pn_range_start, pn_range_end)):
             n_spds += 1
