@@ -154,6 +154,64 @@ class BytesHex(BaseFormatterReader):
         return bytes.fromhex(str_value)
 
 
+def _bit_mask(num: int) -> int:
+    return (1 << num) - 1
+
+
+class IntBitFieldStruct(BaseFormatterReader):
+    """
+    Format/read int as bit field structure.
+    """
+
+    def __init__(self, fields: list[tuple[str, int, str, int]]) -> None:
+        self._fields = fields
+
+    def format(self, value: Any) -> str:
+        """
+        Convert value into string.
+
+        :param value: Value.
+        :return: Value as string.
+        """
+
+        result = []
+        total_len = 0
+        for field_name, field_len, field_fmt, _ in reversed(self._fields):
+            total_len += field_len
+            field_value = value & _bit_mask(field_len)
+            value >>= field_len
+            result.append(field_name + '=' + field_fmt.format(field_value))
+
+        assert total_len in (8, 16, 32, 64), \
+            f'Wrong total bit filed length: {total_len}'
+        assert value == 0, \
+            f'Non-zero leftover after parsing bit field: {value} != 0'
+
+        return ' '.join(reversed(result))
+
+    def read(self, str_value: str) -> Any:
+        """
+        Convert string to value.
+
+        :param str_value: Value as string.
+        :return: Value.
+        """
+
+        str_fields = list(str_value.split())
+        value = 0
+        for str_filed_val, (field_name, field_len, _, field_base) in zip(str_fields, self._fields):
+            str_field_name, str_field_val = str_filed_val.split('=', 1)
+            assert str_field_name == field_name, \
+                f'Wrong bit field name in this position: {str_field_name} != {field_name}'
+            field_val = int(str_field_val, field_base)
+            assert (field_val >> field_len) == 0, \
+                f'Value of field "{field_name}" is too long: {field_val} (must be {field_len} bits)'
+
+            value = (value << field_len) | field_val
+
+        return value
+
+
 class Struct:
     """
     Convenience wrapper for reading/writing binary structures.
@@ -368,3 +426,23 @@ def test_bytes_hex() -> None:
     val = b'test123'
     str_val = BytesHex().format(val)
     assert BytesHex().read(str_val) == val
+
+
+def test_int_bit_field_struct() -> None:
+    """
+    Test IntBitFieldStruct.
+
+    :return: None.
+    """
+
+    fmt = IntBitFieldStruct([
+        ('a', 8, '0b{:08b}', 2),
+        ('b', 3, '0b{:03b}', 2),
+        ('c', 4, '0b{:04b}', 2),
+        ('d', 1, '0b{:01b}', 2),
+        ('e', 16, '0x{:04x}', 16),
+    ])
+    val = 0b10101010_110_0110_0_0000111111110000
+    str_val = fmt.format(val)
+    assert str_val == 'a=0b10101010 b=0b110 c=0b0110 d=0b0 e=0x0ff0'
+    assert fmt.read(str_val) == val
