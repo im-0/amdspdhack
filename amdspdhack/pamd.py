@@ -128,9 +128,18 @@ _BIOS_DIR_ENTRY_DESCRIPTION = (
     # 	int ro:1;
     # 	int compressed:1;
     # 	int inst:4;
-    ('B', 'flags_reset_copy_ro_compressed_inst', strct.IntBin(8)),
+    ('B', 'flags_reset_copy_ro_compressed_inst', strct.IntBitFieldStruct([
+        ('reset_image', 1, '0b{:01b}', 2),
+        ('copy_image', 1, '0b{:01b}', 2),
+        ('read_only', 1, '0b{:01b}', 2),
+        ('compressed', 1, '0b{:01b}', 2),
+        ('instance', 4, '0x{:01x}', 16),
+    ])),
     # 	uint8_t subprog; /* b[7:3] reserved */
-    ('B', 'subprog', strct.IntBin(8)),
+    ('B', 'subprog', strct.IntBitFieldStruct([
+        ('subprogram', 3, '0x{:01x}', 16),
+        ('reserved', 5, '0x{:01x}', 16),
+    ])),
     # 	uint32_t size;
     ('I', 'size', None),
     # 	uint64_t source;
