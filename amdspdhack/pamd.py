@@ -128,7 +128,7 @@ _BIOS_DIR_ENTRY_DESCRIPTION = (
     # 	int ro:1;
     # 	int compressed:1;
     # 	int inst:4;
-    ('B', 'flags_reset_copy_ro_compressed_inst', strct.IntBitFieldStruct([
+    ('B', 'flags', strct.IntBitFieldStruct([
         ('reset_image', 1, '0b{:01b}', 2),
         ('copy_image', 1, '0b{:01b}', 2),
         ('read_only', 1, '0b{:01b}', 2),
