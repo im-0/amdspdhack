@@ -64,25 +64,49 @@ _DDR4_SPD_DESCRIPTION = (
     # ! Dec !! Hex !! 7 !! 6 !! 5 !! 4 !! 3 !! 2 !! 1 !! 0
     # |-
     # |  0 || 0x00 ||colspan=8| SPD bytes used
-    ('B', 'spd_bytes_used', None),
+    ('B', 'size', strct.IntBitFieldStruct([
+        ('reserved', 1, '0b{:01b}', 2),
+        ('bytes_total', 3, '0b{:03b}', 2),
+        ('bytes_used', 4, '0b{:04b}', 2),
+    ])),
     # |-
     # |  1 || 0x01 ||colspan=8| SPD revision n || Typically 0x10, 0x11, 0x12
-    ('B', 'spd_revision_n', None),
+    ('B', 'revision', strct.IntBitFieldStruct([
+        ('encoding', 4, '0x{:01x}', 16),
+        ('additions', 4, '0x{:01x}', 16),
+    ])),
     # |-
     # |  2 || 0x02 ||colspan=8| Basic memory type (12 = DDR4 SDRAM) || Type of RAM chips
-    ('B', 'type_of_ram_chips', None),
+    ('B', 'type_of_ram_chips', strct.IntHex(2)),
     # |-
     # |  3 || 0x03 ||colspan=4 {{n/a|Reserved}} ||colspan=4| Module type || Type of module; e.g., 2 = Unbuffered DIMM, 3 = SO-DIMM, 11=LRDIMM
-    ('B', 'reserved | type_of_module', strct.IntBin(8)),
+    ('B', 'module_type', strct.IntBitFieldStruct([
+        ('hybrid', 1, '0b{:01b}', 2),
+        ('hybrid_media', 3, '0b{:03b}', 2),
+        ('base_type', 4, '0b{:04b}', 2),
+    ])),
     # |-
     # |  4 || 0x04 ||colspan=2| Bank group bits ||colspan=2| Bank address bits−2 ||colspan=4| Total SDRAM capacity per die in Mb || Zero means no bank groups, 4 banks, 256 Mibit.
-    ('B', 'bank_group_bits | bank_address_bits_2 | total_capacity_per_die_mb', strct.IntBin(8)),
+    ('B', 'sdram_density_and_banks', strct.IntBitFieldStruct([
+        ('bank_group_bits', 2, '0b{:02b}', 2),
+        ('bank_address_bits', 2, '0b{:02b}', 2),
+        ('capacity_per_die', 4, '0b{:04b}', 2),
+    ])),
     # |-
     # |  5 || 0x05 ||colspan=2 {{n/a|Reserved}} ||colspan=3| Row address bits−12 ||colspan=3| Column address bits−9 ||
-    ('B', 'reserved | row_addr_bits_12 | column_addr_bits_9', strct.IntBin(8)),
+    ('B', 'sdram_addressing', strct.IntBitFieldStruct([
+        ('reserved', 2, '0b{:02b}', 2),
+        ('row_address_bits', 3, '0b{:03b}', 2),
+        ('column_address_bits', 3, '0b{:03b}', 2),
+    ])),
     # |-
     # |  6 || 0x06 || Primary SDRAM package type ||colspan=3| Die count ||colspan=2 {{n/a|Reserved}} ||colspan=2| Signal loading
-    ('B', 'primary_sdram_pkg_type | die_count | signal_loading', strct.IntBin(8)),
+    ('B', 'primary_sdram_pkg_type', strct.IntBitFieldStruct([
+        ('primary_sdram_pkg_type', 1, '0b{:01b}', 2),
+        ('die_count', 3, '0b{:03b}', 2),
+        ('reserved', 2, '0b{:02b}', 2),
+        ('signal_loading', 2, '0b{:02b}', 2),
+    ])),
     # |-
     # |  7 || 0x07 ||colspan=2 {{n/a|Reserved}} ||colspan=2| Maximum activate window (tMAW) ||colspan=4| Maximum activate count (MAC) || SDRAM optional features
     ('B', 'reserved | max_activate_window_tMAW | max_activate_count_MAC', strct.IntBin(8)),
@@ -345,8 +369,7 @@ def parse_spd(
         f'Unsupported RAM type: {type_of_ram_chips} not in {_CHIP_TYPES_DDR4} (DDR4)'
 
     # Byte 0 (0x000): Number of Bytes Used / Number of Bytes in SPD Device
-    spd_bytes_used = spd['spd_bytes_used']
-    spd_bytes_total = (spd_bytes_used >> 4) & 0b111
+    spd_bytes_total = (spd['size'] >> 4) & 0b111
     print(f'[ ] Total bytes in possible SPD at 0x{offset:08x}: 0b{spd_bytes_total:03b}')
     assert spd_bytes_total == _SPD_BYTES_TOTAL_512,\
         f'Unsupported SPD length: 0b{spd_bytes_total:03b} != 0x{_SPD_BYTES_TOTAL_512:03b} (512b)'
@@ -536,7 +559,7 @@ def test_parse_spd_checksums() -> None:
     orig_spd = parse_spd(orig_spd_bin, 0, True)
 
     bad_spd = copy.deepcopy(orig_spd)
-    bad_spd['spd_revision_n'] += 1
+    bad_spd['revision'] += 1
 
     bad_spd_bin = DDR4_SPD.pack(bad_spd)
     assert bad_spd_bin != orig_spd_bin
@@ -567,7 +590,7 @@ def test_fix_checksums() -> None:
 
     orig_spd = parse_spd(orig_spd_bin, 0, True)
     bad_spd = copy.deepcopy(orig_spd)
-    bad_spd['spd_revision_n'] += 1
+    bad_spd['revision'] += 1
 
     bad_spd_bin = DDR4_SPD.pack(bad_spd)
     assert bad_spd_bin != orig_spd_bin
@@ -702,7 +725,7 @@ def test_replace_spds_bad_spd() -> None:
         image = image_f.read()
     spd = parse_spd(image, 4010700, True)
 
-    spd['spd_revision_n'] += 1
+    spd['revision'] += 1
     try:
         replace_spds(image, [(4010700, spd)], True)
     except AssertionError:
@@ -740,7 +763,7 @@ def test_replace_spds_modified() -> None:
         image = image_f.read()
     spd = parse_spd(image, 4010700, True)
 
-    spd['spd_revision_n'] += 1
+    spd['revision'] += 1
     spd = fix_checksums(spd)
 
     new_image = replace_spds(image, [(4010700, spd)], True)
